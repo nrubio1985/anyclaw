@@ -49,9 +49,23 @@ function initSchema(db: Database.Database) {
       UNIQUE(agent_id, date)
     );
 
+    CREATE TABLE IF NOT EXISTS gateways (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      profile TEXT UNIQUE NOT NULL,
+      port INTEGER UNIQUE NOT NULL,
+      status TEXT DEFAULT 'created' CHECK(status IN ('created','starting','pairing','connected','stopped','error')),
+      phone TEXT,
+      pid INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_agents_user ON agents(user_id);
     CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
     CREATE INDEX IF NOT EXISTS idx_usage_agent_date ON agent_usage(agent_id, date);
+    CREATE INDEX IF NOT EXISTS idx_gateways_user ON gateways(user_id);
+    CREATE INDEX IF NOT EXISTS idx_gateways_status ON gateways(status);
   `);
 }
 

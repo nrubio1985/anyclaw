@@ -1,17 +1,43 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import QRCode from "qrcode";
 
 interface Agent {
-  id: string; name: string; template_id: string; status: string;
-  personality: string; rules: string; created_at: string; config_json: string;
+  id: string;
+  name: string;
+  template_id: string;
+  status: string;
+  personality: string;
+  rules: string;
+  created_at: string;
+  config_json: string;
+  whatsapp_session: string | null;
 }
 
 interface UsageData {
-  daily: { date: string; messages_in: number; messages_out: number; tokens_used: number }[];
-  totals: { total_messages_in: number; total_messages_out: number; total_tokens: number };
+  daily: {
+    date: string;
+    messages_in: number;
+    messages_out: number;
+    tokens_used: number;
+  }[];
+  totals: {
+    total_messages_in: number;
+    total_messages_out: number;
+    total_tokens: number;
+  };
+}
+
+interface GatewayData {
+  id: string;
+  profile: string;
+  port: number;
+  status: string;
+  phone: string | null;
+  serviceActive?: boolean;
 }
 
 const statusStyle: Record<string, string> = {
@@ -22,15 +48,28 @@ const statusStyle: Record<string, string> = {
   error: "bg-red-500/20 text-red-400 border-red-500/30",
 };
 
+const gwStatusStyle: Record<string, string> = {
+  created: "text-yellow-400",
+  starting: "text-blue-400",
+  pairing: "text-cyan-400",
+  connected: "text-green-400",
+  stopped: "text-zinc-400",
+  error: "text-red-400",
+};
+
 export default function AgentPage() {
   const params = useParams();
   const [agent, setAgent] = useState<Agent | null>(null);
   const [identity, setIdentity] = useState("");
   const [usage, setUsage] = useState<UsageData | null>(null);
+  const [gateway, setGateway] = useState<GatewayData | null>(null);
+  const [qrData, setQrData] = useState<string | null>(null);
+  const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [provisioning, setProvisioning] = useState(false);
   const [provisionError, setProvisionError] = useState("");
   const [showIdentity, setShowIdentity] = useState(false);
+  const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchAgent = useCallback(() => {
     fetch(`/api/agents/${params.id}`)
@@ -46,18 +85,100 @@ export default function AgentPage() {
       .catch(() => setLoading(false));
   }, [params.id]);
 
+  const fetchGateway = useCallback(
+    (gatewayId: string) => {
+      fetch(`/api/gateways/${gatewayId}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.gateway) {
+            setGateway(data.gateway);
+            // If gateway became connected, update agent
+            if (data.gateway.status === "connected") {
+              fetchAgent();
+            }
+          }
+        })
+        .catch(() => {});
+    },
+    [fetchAgent]
+  );
+
+  const pollQr = useCallback(
+    (gatewayId: string) => {
+      // Clear any existing poll
+      if (qrPollRef.current) clearInterval(qrPollRef.current);
+
+      const poll = () => {
+        fetch(`/api/gateways/${gatewayId}/qr`)
+          .then((r) => r.json())
+          .then(async (data) => {
+            if (data.qr) {
+              setQrData(data.qr);
+              // Generate QR image
+              try {
+                const url = await QRCode.toDataURL(data.qr, {
+                  width: 280,
+                  margin: 2,
+                  color: { dark: "#ffffff", light: "#00000000" },
+                });
+                setQrImageUrl(url);
+              } catch {
+                setQrImageUrl(null);
+              }
+            }
+            if (data.status === "connected") {
+              // Stop polling
+              if (qrPollRef.current) clearInterval(qrPollRef.current);
+              setQrData(null);
+              setQrImageUrl(null);
+              fetchGateway(gatewayId);
+              fetchAgent();
+            }
+          })
+          .catch(() => {});
+      };
+
+      poll(); // Immediate first poll
+      qrPollRef.current = setInterval(poll, 4000); // Poll every 4s
+    },
+    [fetchAgent, fetchGateway]
+  );
+
   useEffect(() => {
     fetchAgent();
-    fetch(`/api/agents/${params.id}/usage`).then((r) => r.json()).then(setUsage).catch(() => {});
+    fetch(`/api/agents/${params.id}/usage`)
+      .then((r) => r.json())
+      .then(setUsage)
+      .catch(() => {});
   }, [params.id, fetchAgent]);
+
+  // Fetch gateway when agent loads
+  useEffect(() => {
+    if (agent?.whatsapp_session) {
+      fetchGateway(agent.whatsapp_session);
+    }
+  }, [agent?.whatsapp_session, fetchGateway]);
+
+  // Start QR polling when gateway is in pairing state
+  useEffect(() => {
+    if (gateway && gateway.status === "pairing") {
+      pollQr(gateway.id);
+    }
+    return () => {
+      if (qrPollRef.current) clearInterval(qrPollRef.current);
+    };
+  }, [gateway?.id, gateway?.status, pollQr]);
 
   const handleProvision = async () => {
     setProvisioning(true);
     setProvisionError("");
     try {
-      const res = await fetch(`/api/agents/${params.id}/provision`, { method: "POST" });
+      const res = await fetch(`/api/agents/${params.id}/provision`, {
+        method: "POST",
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Provisioning failed");
+      if (data.gateway) setGateway(data.gateway);
       fetchAgent();
     } catch (e: unknown) {
       setProvisionError((e as Error).message);
@@ -66,15 +187,25 @@ export default function AgentPage() {
     }
   };
 
-  if (loading) return <div className="min-h-dvh flex items-center justify-center"><div className="text-zinc-500 text-sm">Loading...</div></div>;
-  if (!agent) return (
-    <div className="min-h-dvh flex items-center justify-center px-4">
-      <div className="text-center">
-        <h1 className="text-xl font-bold mb-3 md:text-2xl">Agent not found</h1>
-        <Link href="/" className="btn-primary">Go home</Link>
+  if (loading)
+    return (
+      <div className="min-h-dvh flex items-center justify-center">
+        <div className="text-zinc-500 text-sm">Loading...</div>
       </div>
-    </div>
-  );
+    );
+  if (!agent)
+    return (
+      <div className="min-h-dvh flex items-center justify-center px-4">
+        <div className="text-center">
+          <h1 className="text-xl font-bold mb-3 md:text-2xl">
+            Agent not found
+          </h1>
+          <Link href="/" className="btn-primary">
+            Go home
+          </Link>
+        </div>
+      </div>
+    );
 
   return (
     <div className="min-h-dvh flex flex-col">
@@ -84,9 +215,13 @@ export default function AgentPage() {
             <span className="text-xl md:text-2xl">🦀</span>
             <span className="text-lg font-bold md:text-xl">AnyClaw</span>
           </Link>
-          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium md:px-3 md:text-xs ${
-            statusStyle[agent.status] || statusStyle.created
-          }`}>{agent.status}</span>
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[10px] font-medium md:px-3 md:text-xs ${
+              statusStyle[agent.status] || statusStyle.created
+            }`}
+          >
+            {agent.status}
+          </span>
         </div>
       </nav>
 
@@ -95,42 +230,189 @@ export default function AgentPage() {
         <div>
           <h1 className="text-2xl font-bold md:text-3xl">{agent.name}</h1>
           <p className="text-xs text-zinc-500 mt-1 md:text-sm md:mt-2">
-            {agent.template_id} &middot; {new Date(agent.created_at).toLocaleDateString()}
+            {agent.template_id} &middot;{" "}
+            {new Date(agent.created_at).toLocaleDateString()}
           </p>
         </div>
 
-        {/* Status CTA */}
+        {/* Status CTA: Created */}
         {agent.status === "created" && (
           <div className="card text-center !py-8 md:!py-12 md:max-w-lg md:mx-auto">
             <div className="text-3xl mb-3 md:text-4xl md:mb-4">📱</div>
-            <h3 className="text-base font-semibold mb-1 md:text-lg">Ready to connect</h3>
-            <p className="text-zinc-400 text-xs mb-4 md:text-sm md:mb-6">Provision your agent on OpenClaw and connect WhatsApp.</p>
-            <button onClick={handleProvision} disabled={provisioning}
-              className="btn-primary disabled:opacity-30">
+            <h3 className="text-base font-semibold mb-1 md:text-lg">
+              Ready to connect
+            </h3>
+            <p className="text-zinc-400 text-xs mb-4 md:text-sm md:mb-6">
+              Provision your agent and connect WhatsApp.
+            </p>
+            <button
+              onClick={handleProvision}
+              disabled={provisioning}
+              className="btn-primary disabled:opacity-30"
+            >
               {provisioning ? "Provisioning..." : "🚀 Activate Agent"}
             </button>
-            {provisionError && <p className="text-xs text-red-400 mt-2 md:text-sm">{provisionError}</p>}
+            {provisionError && (
+              <p className="text-xs text-red-400 mt-2 md:text-sm">
+                {provisionError}
+              </p>
+            )}
           </div>
         )}
 
+        {/* Status CTA: Linking — Show QR or waiting */}
         {agent.status === "linking" && (
-          <div className="card text-center !py-8 md:!py-12 md:max-w-lg md:mx-auto">
-            <div className="text-3xl mb-3 md:text-4xl md:mb-4">✅</div>
-            <h3 className="text-base font-semibold mb-1 md:text-lg text-cyan-400">Agent Provisioned</h3>
-            <p className="text-zinc-400 text-xs md:text-sm mb-4">
-              Registered on OpenClaw. Your agent will respond only to your WhatsApp number.
-            </p>
-            <div className="inline-flex items-center gap-2 rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-2.5">
-              <span className="text-green-400 text-xs">●</span>
-              <span className="text-sm text-zinc-300">Connected to gateway</span>
-            </div>
+          <div className="card text-center !py-6 md:!py-10 md:max-w-lg md:mx-auto">
+            {/* Gateway info */}
+            {gateway && (
+              <div className="mb-4">
+                <div className="inline-flex items-center gap-2 rounded-xl bg-zinc-950 border border-zinc-800 px-3 py-2 mb-4">
+                  <span
+                    className={`text-xs ${gwStatusStyle[gateway.status] || "text-zinc-400"}`}
+                  >
+                    ●
+                  </span>
+                  <span className="text-xs text-zinc-300">
+                    Gateway{" "}
+                    {gateway.status === "connected"
+                      ? "connected"
+                      : gateway.status === "pairing"
+                        ? "ready — scan QR"
+                        : gateway.status}
+                  </span>
+                  <span className="text-[10px] text-zinc-600 font-mono">
+                    :{gateway.port}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* QR Code */}
+            {gateway?.status === "pairing" && (
+              <>
+                {qrImageUrl ? (
+                  <div className="flex flex-col items-center">
+                    <div className="text-xl mb-2 md:text-2xl">📲</div>
+                    <h3 className="text-base font-semibold mb-1 md:text-lg text-cyan-400">
+                      Scan QR with WhatsApp
+                    </h3>
+                    <p className="text-zinc-400 text-xs mb-4 md:text-sm">
+                      Open WhatsApp → Linked Devices → Link a Device
+                    </p>
+                    <div className="rounded-2xl bg-zinc-950 border border-zinc-800 p-4 inline-block">
+                      <img
+                        src={qrImageUrl}
+                        alt="WhatsApp QR Code"
+                        className="w-56 h-56 md:w-64 md:h-64"
+                      />
+                    </div>
+                    <p className="text-[10px] text-zinc-600 mt-3 animate-pulse">
+                      Refreshing automatically...
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <div className="text-3xl mb-3 md:text-4xl md:mb-4">⏳</div>
+                    <h3 className="text-base font-semibold mb-1 md:text-lg text-cyan-400">
+                      Waiting for QR Code
+                    </h3>
+                    <p className="text-zinc-400 text-xs md:text-sm">
+                      Gateway is starting up. QR code will appear shortly...
+                    </p>
+                    <div className="mt-4 flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                      <div
+                        className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-pulse"
+                        style={{ animationDelay: "0.3s" }}
+                      />
+                      <div
+                        className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-pulse"
+                        style={{ animationDelay: "0.6s" }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Gateway connected but agent still linking */}
+            {gateway?.status === "connected" && (
+              <div className="flex flex-col items-center">
+                <div className="text-3xl mb-3 md:text-4xl md:mb-4">✅</div>
+                <h3 className="text-base font-semibold mb-1 md:text-lg text-cyan-400">
+                  WhatsApp Connected
+                </h3>
+                <p className="text-zinc-400 text-xs md:text-sm mb-3">
+                  Your agent is linked and ready to receive messages.
+                </p>
+                {gateway.phone && (
+                  <div className="inline-flex items-center gap-2 rounded-xl bg-zinc-950 border border-green-500/20 px-4 py-2.5">
+                    <span className="text-green-400 text-xs">●</span>
+                    <span className="text-sm text-zinc-300 font-mono">
+                      {gateway.phone}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* No gateway yet, show provisioning state */}
+            {!gateway && (
+              <div className="flex flex-col items-center">
+                <div className="text-3xl mb-3 md:text-4xl md:mb-4">✅</div>
+                <h3 className="text-base font-semibold mb-1 md:text-lg text-cyan-400">
+                  Agent Provisioned
+                </h3>
+                <p className="text-zinc-400 text-xs md:text-sm mb-4">
+                  Registered on OpenClaw. Your agent will respond only to your
+                  WhatsApp number.
+                </p>
+                <div className="inline-flex items-center gap-2 rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-2.5">
+                  <span className="text-green-400 text-xs">●</span>
+                  <span className="text-sm text-zinc-300">
+                    Connected to gateway
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
+        {/* Active */}
         {agent.status === "active" && (
           <div className="card text-center !py-6 !border-green-500/20 md:!py-10 md:max-w-lg md:mx-auto">
             <div className="text-3xl mb-2 md:text-4xl md:mb-3">✅</div>
-            <h3 className="text-base font-semibold text-green-400 md:text-lg">Agent is live!</h3>
+            <h3 className="text-base font-semibold text-green-400 md:text-lg">
+              Agent is live!
+            </h3>
+            {gateway?.phone && (
+              <p className="text-xs text-zinc-500 mt-2 font-mono">
+                {gateway.phone}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Error */}
+        {agent.status === "error" && (
+          <div className="card text-center !py-6 !border-red-500/20 md:!py-10 md:max-w-lg md:mx-auto">
+            <div className="text-3xl mb-2 md:text-4xl md:mb-3">❌</div>
+            <h3 className="text-base font-semibold text-red-400 md:text-lg">
+              Something went wrong
+            </h3>
+            <p className="text-zinc-400 text-xs mt-2 md:text-sm">
+              Try re-provisioning your agent.
+            </p>
+            <button
+              onClick={handleProvision}
+              disabled={provisioning}
+              className="btn-primary mt-4 disabled:opacity-30"
+            >
+              {provisioning ? "Retrying..." : "🔄 Retry"}
+            </button>
+            {provisionError && (
+              <p className="text-xs text-red-400 mt-2">{provisionError}</p>
+            )}
           </div>
         )}
 
@@ -139,25 +421,50 @@ export default function AgentPage() {
           {/* Usage */}
           {usage && (
             <div className="card">
-              <h2 className="text-sm font-bold mb-3 md:text-base md:mb-4">Usage</h2>
+              <h2 className="text-sm font-bold mb-3 md:text-base md:mb-4">
+                Usage
+              </h2>
               <div className="grid grid-cols-3 gap-2 md:gap-3">
                 {[
-                  { val: usage.totals.total_messages_in + usage.totals.total_messages_out, label: "Messages" },
-                  { val: usage.totals.total_tokens > 1000 ? `${(usage.totals.total_tokens / 1000).toFixed(1)}k` : usage.totals.total_tokens, label: "Tokens" },
+                  {
+                    val:
+                      usage.totals.total_messages_in +
+                      usage.totals.total_messages_out,
+                    label: "Messages",
+                  },
+                  {
+                    val:
+                      usage.totals.total_tokens > 1000
+                        ? `${(usage.totals.total_tokens / 1000).toFixed(1)}k`
+                        : usage.totals.total_tokens,
+                    label: "Tokens",
+                  },
                   { val: usage.daily.length, label: "Days" },
                 ].map((s) => (
-                  <div key={s.label} className="rounded-xl bg-zinc-950 border border-zinc-800 p-3 text-center md:p-4">
-                    <div className="text-lg font-bold text-cyan-400 md:text-xl">{s.val}</div>
-                    <div className="text-[10px] text-zinc-500 md:text-xs">{s.label}</div>
+                  <div
+                    key={s.label}
+                    className="rounded-xl bg-zinc-950 border border-zinc-800 p-3 text-center md:p-4"
+                  >
+                    <div className="text-lg font-bold text-cyan-400 md:text-xl">
+                      {s.val}
+                    </div>
+                    <div className="text-[10px] text-zinc-500 md:text-xs">
+                      {s.label}
+                    </div>
                   </div>
                 ))}
               </div>
               {usage.daily.length > 0 && (
                 <div className="mt-3 space-y-1 md:mt-4 md:space-y-2">
                   {usage.daily.slice(0, 7).map((d) => (
-                    <div key={d.date} className="flex items-center justify-between text-xs md:text-sm">
+                    <div
+                      key={d.date}
+                      className="flex items-center justify-between text-xs md:text-sm"
+                    >
                       <span className="text-zinc-500">{d.date}</span>
-                      <span className="text-zinc-400">{d.messages_in + d.messages_out} msgs</span>
+                      <span className="text-zinc-400">
+                        {d.messages_in + d.messages_out} msgs
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -167,15 +474,23 @@ export default function AgentPage() {
 
           {/* Identity (collapsible on mobile, expanded on desktop) */}
           <div className="card">
-            <button onClick={() => setShowIdentity(!showIdentity)}
-              className="w-full flex items-center justify-between md:cursor-default">
-              <h2 className="text-sm font-bold md:text-base">Agent Identity</h2>
-              <span className="text-zinc-500 text-xs md:hidden">{showIdentity ? "Hide" : "Show"}</span>
+            <button
+              onClick={() => setShowIdentity(!showIdentity)}
+              className="w-full flex items-center justify-between md:cursor-default"
+            >
+              <h2 className="text-sm font-bold md:text-base">
+                Agent Identity
+              </h2>
+              <span className="text-zinc-500 text-xs md:hidden">
+                {showIdentity ? "Hide" : "Show"}
+              </span>
             </button>
             {/* Always show on md+, toggle on mobile */}
-            <pre className={`mt-3 rounded-xl bg-zinc-950 border border-zinc-800 p-3 text-xs text-zinc-300 overflow-x-auto whitespace-pre-wrap font-mono max-h-80 overflow-y-auto md:block md:max-h-96 md:p-4 md:text-sm ${
-              showIdentity ? "block" : "hidden md:block"
-            }`}>
+            <pre
+              className={`mt-3 rounded-xl bg-zinc-950 border border-zinc-800 p-3 text-xs text-zinc-300 overflow-x-auto whitespace-pre-wrap font-mono max-h-80 overflow-y-auto md:block md:max-h-96 md:p-4 md:text-sm ${
+                showIdentity ? "block" : "hidden md:block"
+              }`}
+            >
               {identity}
             </pre>
           </div>
