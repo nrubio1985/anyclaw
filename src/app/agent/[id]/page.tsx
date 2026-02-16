@@ -115,9 +115,15 @@ export default function AgentPage() {
 
         {agent.status === "linking" && (
           <div className="card text-center !py-8 md:!py-12 md:max-w-lg md:mx-auto">
-            <div className="text-3xl mb-3 md:text-4xl md:mb-4">⏳</div>
-            <h3 className="text-base font-semibold mb-1 md:text-lg">Waiting for WhatsApp</h3>
-            <p className="text-zinc-400 text-xs md:text-sm">Agent provisioned. QR pairing coming soon.</p>
+            <div className="text-3xl mb-3 md:text-4xl md:mb-4">✅</div>
+            <h3 className="text-base font-semibold mb-1 md:text-lg text-cyan-400">Agent Provisioned</h3>
+            <p className="text-zinc-400 text-xs md:text-sm mb-4">
+              Registered on OpenClaw. Your agent will respond only to your WhatsApp number.
+            </p>
+            <div className="inline-flex items-center gap-2 rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-2.5">
+              <span className="text-green-400 text-xs">●</span>
+              <span className="text-sm text-zinc-300">Connected to gateway</span>
+            </div>
           </div>
         )}
 

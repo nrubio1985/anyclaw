@@ -14,6 +14,52 @@ const TEMPLATES = [
   { id: "custom", emoji: "✨", name: "Custom Agent" },
 ];
 
+/**
+ * Formats a phone number as the user types.
+ * Supports: +54 9 11 2156-3998, +1 555 123-4567, +52 55 1234-5678
+ */
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/[^\d+]/g, "");
+  // Keep the + if present
+  if (!digits.startsWith("+") && digits.length === 0) return "";
+  const clean = digits.startsWith("+") ? digits : "+" + digits;
+
+  // Argentina: +54 9 XX XXXX-XXXX
+  if (clean.startsWith("+54")) {
+    const d = clean.slice(3);
+    if (d.length <= 1) return `+54 ${d}`;
+    if (d.length <= 3) return `+54 ${d.slice(0, 1)} ${d.slice(1)}`;
+    if (d.length <= 7) return `+54 ${d.slice(0, 1)} ${d.slice(1, 3)} ${d.slice(3)}`;
+    return `+54 ${d.slice(0, 1)} ${d.slice(1, 3)} ${d.slice(3, 7)}-${d.slice(7, 11)}`;
+  }
+
+  // Mexico: +52 XX XXXX-XXXX
+  if (clean.startsWith("+52")) {
+    const d = clean.slice(3);
+    if (d.length <= 2) return `+52 ${d}`;
+    if (d.length <= 6) return `+52 ${d.slice(0, 2)} ${d.slice(2)}`;
+    return `+52 ${d.slice(0, 2)} ${d.slice(2, 6)}-${d.slice(6, 10)}`;
+  }
+
+  // US/Canada: +1 XXX XXX-XXXX
+  if (clean.startsWith("+1")) {
+    const d = clean.slice(2);
+    if (d.length <= 3) return `+1 ${d}`;
+    if (d.length <= 6) return `+1 ${d.slice(0, 3)} ${d.slice(3)}`;
+    return `+1 ${d.slice(0, 3)} ${d.slice(3, 6)}-${d.slice(6, 10)}`;
+  }
+
+  // Generic: +CC XXXX XXXX
+  if (clean.length <= 4) return clean;
+  if (clean.length <= 8) return `${clean.slice(0, clean.length > 3 ? (clean[2] === '4' || clean[2] === '5' ? 3 : 4) : 3)} ${clean.slice(clean.length > 3 ? (clean[2] === '4' || clean[2] === '5' ? 3 : 4) : 3)}`;
+  return clean.slice(0, 4) + " " + clean.slice(4, 8) + "-" + clean.slice(8, 12);
+}
+
+/** Strips formatting, returns digits only with + prefix */
+function cleanPhone(formatted: string): string {
+  return formatted.replace(/[^\d+]/g, "");
+}
+
 function CreateWizardInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -28,16 +74,29 @@ function CreateWizardInner() {
     personality: "",
     rules: "",
   });
+  const [phoneDisplay, setPhoneDisplay] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const update = (field: string, value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
 
+  const handlePhoneChange = (value: string) => {
+    // If user is deleting, don't reformat
+    if (value.length < phoneDisplay.length) {
+      setPhoneDisplay(value);
+      update("userPhone", cleanPhone(value));
+      return;
+    }
+    const formatted = formatPhone(value);
+    setPhoneDisplay(formatted);
+    update("userPhone", cleanPhone(formatted));
+  };
+
   const canProceed = () => {
     if (step === 1) return !!form.template;
     if (step === 2) return form.agentName.length >= 2 && form.userName.length >= 2;
-    if (step === 3) return form.userPhone.length >= 8;
+    if (step === 3) return cleanPhone(form.userPhone).length >= 10;
     return false;
   };
 
@@ -140,9 +199,16 @@ function CreateWizardInner() {
             <p className="mb-5 text-center text-sm text-zinc-400 md:text-base md:mb-8">Your phone number for agent access</p>
             <div>
               <label className="label">WhatsApp Number</label>
-              <input type="tel" placeholder="+54 9 11 2156-3998" value={form.userPhone}
-                onChange={(e) => update("userPhone", e.target.value)} className="input" autoFocus />
-              <p className="mt-2 text-xs text-zinc-500 md:text-sm">We&apos;ll link your agent via QR code in the next step.</p>
+              <input type="tel" placeholder="+54 9 11 2156-3998" value={phoneDisplay}
+                onChange={(e) => handlePhoneChange(e.target.value)} className="input" autoFocus />
+              <p className="mt-2 text-xs text-zinc-500 md:text-sm">
+                Your agent will only respond to messages from this number.
+              </p>
+              {form.userPhone && cleanPhone(form.userPhone).length >= 10 && (
+                <p className="mt-1.5 text-xs text-cyan-500/70 font-mono">
+                  {cleanPhone(form.userPhone)}
+                </p>
+              )}
             </div>
           </div>
         )}
