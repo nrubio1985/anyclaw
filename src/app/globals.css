@@ -22,19 +22,32 @@
   --font-mono: var(--font-geist-mono);
 }
 
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
 }
 
 .btn-primary {
-  @apply bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-semibold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-400/30;
+  @apply bg-cyan-500 hover:bg-cyan-400 active:bg-cyan-600 text-zinc-950 font-semibold px-5 py-3 rounded-xl transition-all duration-150 shadow-lg shadow-cyan-500/20 text-sm;
 }
 
 .btn-secondary {
-  @apply border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white px-6 py-3 rounded-xl transition-all duration-200;
+  @apply border border-zinc-700 hover:border-zinc-500 active:border-zinc-400 text-zinc-300 hover:text-white px-5 py-3 rounded-xl transition-all duration-150 text-sm;
 }
 
 .card {
-  @apply bg-zinc-900 border border-zinc-800 rounded-2xl p-6 transition-all duration-200 hover:border-zinc-700;
+  @apply bg-zinc-900 border border-zinc-800 rounded-2xl p-5 transition-all duration-150;
+}
+
+.input {
+  @apply w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white text-base placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500;
+}
+
+.label {
+  @apply mb-1.5 block text-sm font-medium text-zinc-300;
 }

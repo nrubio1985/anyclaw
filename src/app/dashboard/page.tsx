@@ -11,16 +11,12 @@ interface Agent {
   created_at: string;
 }
 
-const templateEmoji: Record<string, string> = {
-  assistant: "🤖",
-  "english-tutor": "🗣️",
-  "fitness-coach": "💪",
-  "study-buddy": "📚",
-  journal: "📝",
-  custom: "✨",
+const emoji: Record<string, string> = {
+  assistant: "🤖", "english-tutor": "🗣️", "fitness-coach": "💪",
+  "study-buddy": "📚", journal: "📝", custom: "✨",
 };
 
-const statusColors: Record<string, string> = {
+const statusStyle: Record<string, string> = {
   created: "bg-yellow-500/20 text-yellow-400",
   linking: "bg-blue-500/20 text-blue-400",
   active: "bg-green-500/20 text-green-400",
@@ -35,68 +31,49 @@ export default function DashboardPage() {
   useEffect(() => {
     fetch("/api/agents")
       .then((r) => r.json())
-      .then((data) => {
-        setAgents(data.agents || []);
-        setLoading(false);
-      })
+      .then((data) => { setAgents(data.agents || []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
   return (
-    <div className="min-h-screen">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-2xl">🦀</span>
-          <span className="text-xl font-bold">AnyClaw</span>
-        </Link>
-        <Link href="/create" className="btn-primary text-sm">
-          + New Agent
-        </Link>
+    <div className="min-h-dvh flex flex-col">
+      <nav className="sticky top-0 z-50 border-b border-zinc-800/50 bg-zinc-950/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
+          <Link href="/" className="flex items-center gap-1.5">
+            <span className="text-xl">🦀</span>
+            <span className="text-lg font-bold">AnyClaw</span>
+          </Link>
+          <Link href="/create" className="btn-primary !px-3 !py-2 !text-xs">+ New</Link>
+        </div>
       </nav>
 
-      <div className="mx-auto max-w-6xl px-6 py-8">
-        <h1 className="text-3xl font-bold mb-8">Your Agents</h1>
+      <div className="flex-1 mx-auto w-full max-w-lg px-4 py-6">
+        <h1 className="text-xl font-bold mb-5">Your Agents</h1>
 
         {loading ? (
-          <div className="text-zinc-500">Loading...</div>
+          <div className="text-zinc-500 text-sm text-center py-12">Loading...</div>
         ) : agents.length === 0 ? (
-          <div className="card text-center py-16">
-            <div className="text-5xl mb-4">🦀</div>
-            <h2 className="text-xl font-semibold mb-2">No agents yet</h2>
-            <p className="text-zinc-400 mb-6">
-              Create your first AI agent in 3 clicks
-            </p>
-            <Link href="/create" className="btn-primary">
-              Create Agent
-            </Link>
+          <div className="card text-center py-12">
+            <div className="text-4xl mb-3">🦀</div>
+            <h2 className="text-lg font-semibold mb-1">No agents yet</h2>
+            <p className="text-zinc-400 text-sm mb-5">Create your first AI agent in 3 clicks</p>
+            <Link href="/create" className="btn-primary">Create Agent</Link>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-3">
             {agents.map((agent) => (
-              <Link
-                key={agent.id}
-                href={`/agent/${agent.id}`}
-                className="card group hover:border-cyan-500/50"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-2xl">
-                    {templateEmoji[agent.template_id] || "🤖"}
-                  </span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      statusColors[agent.status] || statusColors.created
-                    }`}
-                  >
-                    {agent.status}
-                  </span>
+              <Link key={agent.id} href={`/agent/${agent.id}`}
+                className="card flex items-center gap-4 active:scale-[0.98]">
+                <div className="text-2xl flex-shrink-0">{emoji[agent.template_id] || "🤖"}</div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold truncate">{agent.name}</h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    {agent.template_id} &middot; {new Date(agent.created_at).toLocaleDateString()}
+                  </p>
                 </div>
-                <h3 className="text-lg font-semibold group-hover:text-cyan-400 transition-colors">
-                  {agent.name}
-                </h3>
-                <p className="text-sm text-zinc-500 mt-1">
-                  {agent.template_id} &middot;{" "}
-                  {new Date(agent.created_at).toLocaleDateString()}
-                </p>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium flex-shrink-0 ${
+                  statusStyle[agent.status] || statusStyle.created
+                }`}>{agent.status}</span>
               </Link>
             ))}
           </div>

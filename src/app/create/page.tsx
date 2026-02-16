@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
+import Link from "next/link";
 
 const TEMPLATES = [
   { id: "assistant", emoji: "🤖", name: "Personal Assistant" },
@@ -53,190 +54,116 @@ function CreateWizardInner() {
       if (!res.ok) throw new Error(data.error || "Failed to create agent");
       router.push(`/agent/${data.agent.id}`);
     } catch (e: unknown) {
-      const err = e as Error;
-      setError(err.message);
+      setError((e as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-xl">
+    <div className="min-h-dvh flex flex-col">
+      <nav className="sticky top-0 z-50 border-b border-zinc-800/50 bg-zinc-950/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
+          <Link href="/" className="flex items-center gap-1.5">
+            <span className="text-xl">🦀</span>
+            <span className="text-lg font-bold">AnyClaw</span>
+          </Link>
+          <span className="text-xs text-zinc-500">Create Agent</span>
+        </div>
+      </nav>
+
+      <div className="flex-1 mx-auto w-full max-w-lg px-4 py-6">
         {/* Progress */}
-        <div className="mb-8 flex items-center justify-center gap-2">
+        <div className="mb-6 flex items-center justify-center gap-2">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-2">
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold transition-all ${
-                  step >= s
-                    ? "bg-cyan-500 text-zinc-950"
-                    : "bg-zinc-800 text-zinc-500"
-                }`}
-              >
-                {s}
-              </div>
-              {s < 3 && (
-                <div
-                  className={`h-0.5 w-12 transition-all ${
-                    step > s ? "bg-cyan-500" : "bg-zinc-800"
-                  }`}
-                />
-              )}
+              <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all ${
+                step >= s ? "bg-cyan-500 text-zinc-950" : "bg-zinc-800 text-zinc-500"
+              }`}>{s}</div>
+              {s < 3 && <div className={`h-0.5 w-8 transition-all ${step > s ? "bg-cyan-500" : "bg-zinc-800"}`} />}
             </div>
           ))}
         </div>
 
-        {/* Step 1: Template */}
         {step === 1 && (
           <div>
-            <h2 className="mb-2 text-2xl font-bold text-center">
-              Choose your agent type
-            </h2>
-            <p className="mb-8 text-center text-zinc-400">
-              What do you want your AI to do?
-            </p>
-            <div className="grid grid-cols-2 gap-4">
+            <h2 className="mb-1 text-xl font-bold text-center">Choose your agent</h2>
+            <p className="mb-5 text-center text-sm text-zinc-400">What do you want your AI to do?</p>
+            <div className="grid grid-cols-2 gap-3">
               {TEMPLATES.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => update("template", t.id)}
-                  className={`card text-left transition-all ${
-                    form.template === t.id
-                      ? "border-cyan-500 bg-cyan-500/5 shadow-lg shadow-cyan-500/10"
-                      : ""
-                  }`}
-                >
-                  <div className="text-2xl mb-2">{t.emoji}</div>
-                  <div className="font-medium">{t.name}</div>
+                <button key={t.id} onClick={() => update("template", t.id)}
+                  className={`card text-left active:scale-[0.97] !p-4 ${
+                    form.template === t.id ? "!border-cyan-500 bg-cyan-500/5 shadow-lg shadow-cyan-500/10" : ""
+                  }`}>
+                  <div className="text-xl mb-1">{t.emoji}</div>
+                  <div className="text-sm font-medium">{t.name}</div>
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Step 2: Customize */}
         {step === 2 && (
           <div>
-            <h2 className="mb-2 text-2xl font-bold text-center">
-              Customize your agent
-            </h2>
-            <p className="mb-8 text-center text-zinc-400">
-              Give it a name and personality
-            </p>
+            <h2 className="mb-1 text-xl font-bold text-center">Customize</h2>
+            <p className="mb-5 text-center text-sm text-zinc-400">Give it a name and personality</p>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-300">
-                  Agent Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Luna, Max, Coach..."
-                  value={form.agentName}
-                  onChange={(e) => update("agentName", e.target.value)}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                />
+                <label className="label">Agent Name</label>
+                <input type="text" placeholder="e.g. Luna, Max, Coach..." value={form.agentName}
+                  onChange={(e) => update("agentName", e.target.value)} className="input" autoFocus />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-300">
-                  Your Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="So your agent knows who you are"
-                  value={form.userName}
-                  onChange={(e) => update("userName", e.target.value)}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                />
+                <label className="label">Your Name</label>
+                <input type="text" placeholder="So your agent knows who you are" value={form.userName}
+                  onChange={(e) => update("userName", e.target.value)} className="input" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-300">
-                  Personality{" "}
-                  <span className="text-zinc-500">(optional)</span>
-                </label>
-                <textarea
-                  placeholder="e.g. Friendly and casual, uses humor. Responds in Spanish."
-                  value={form.personality}
-                  onChange={(e) => update("personality", e.target.value)}
-                  rows={3}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 resize-none"
-                />
+                <label className="label">Personality <span className="text-zinc-500 font-normal">(optional)</span></label>
+                <textarea placeholder="e.g. Friendly and casual. Responds in Spanish."
+                  value={form.personality} onChange={(e) => update("personality", e.target.value)}
+                  rows={2} className="input resize-none" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-300">
-                  Custom Rules{" "}
-                  <span className="text-zinc-500">(optional)</span>
-                </label>
-                <textarea
-                  placeholder="e.g. Never talk about politics. Always suggest healthy options."
-                  value={form.rules}
-                  onChange={(e) => update("rules", e.target.value)}
-                  rows={3}
-                  className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 resize-none"
-                />
+                <label className="label">Rules <span className="text-zinc-500 font-normal">(optional)</span></label>
+                <textarea placeholder="e.g. Never talk about politics."
+                  value={form.rules} onChange={(e) => update("rules", e.target.value)}
+                  rows={2} className="input resize-none" />
               </div>
             </div>
           </div>
         )}
 
-        {/* Step 3: Connect */}
         {step === 3 && (
           <div>
-            <h2 className="mb-2 text-2xl font-bold text-center">
-              Connect WhatsApp
-            </h2>
-            <p className="mb-8 text-center text-zinc-400">
-              Your phone number for agent access
-            </p>
+            <h2 className="mb-1 text-xl font-bold text-center">Connect WhatsApp</h2>
+            <p className="mb-5 text-center text-sm text-zinc-400">Your phone number for agent access</p>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-300">
-                WhatsApp Phone Number
-              </label>
-              <input
-                type="tel"
-                placeholder="+54 9 11 2156-3998"
-                value={form.userPhone}
-                onChange={(e) => update("userPhone", e.target.value)}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-              />
-              <p className="mt-2 text-xs text-zinc-500">
-                We&apos;ll send you a QR code to link your WhatsApp in the next step.
-              </p>
+              <label className="label">WhatsApp Number</label>
+              <input type="tel" placeholder="+54 9 11 2156-3998" value={form.userPhone}
+                onChange={(e) => update("userPhone", e.target.value)} className="input" autoFocus />
+              <p className="mt-2 text-xs text-zinc-500">We&apos;ll link your agent via QR code in the next step.</p>
             </div>
           </div>
         )}
 
-        {/* Error */}
         {error && (
-          <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-            {error}
-          </div>
+          <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>
         )}
+      </div>
 
-        {/* Navigation */}
-        <div className="mt-8 flex gap-4">
+      {/* Sticky bottom */}
+      <div className="sticky bottom-0 border-t border-zinc-800/50 bg-zinc-950/90 backdrop-blur-xl px-4 py-4">
+        <div className="mx-auto max-w-lg flex gap-3">
           {step > 1 && (
-            <button
-              onClick={() => setStep(step - 1)}
-              className="btn-secondary flex-1"
-            >
-              Back
-            </button>
+            <button onClick={() => setStep(step - 1)} className="btn-secondary flex-1">Back</button>
           )}
           {step < 3 ? (
-            <button
-              onClick={() => setStep(step + 1)}
-              disabled={!canProceed()}
-              className="btn-primary flex-1 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Continue
-            </button>
+            <button onClick={() => setStep(step + 1)} disabled={!canProceed()}
+              className="btn-primary flex-1 disabled:opacity-30 disabled:cursor-not-allowed">Continue</button>
           ) : (
-            <button
-              onClick={handleCreate}
-              disabled={!canProceed() || loading}
-              className="btn-primary flex-1 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
+            <button onClick={handleCreate} disabled={!canProceed() || loading}
+              className="btn-primary flex-1 disabled:opacity-30 disabled:cursor-not-allowed">
               {loading ? "Creating..." : "🚀 Create Agent"}
             </button>
           )}
@@ -248,13 +175,7 @@ function CreateWizardInner() {
 
 export default function CreatePage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-zinc-500">Loading...</div>
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="min-h-dvh flex items-center justify-center"><div className="text-zinc-500 text-sm">Loading...</div></div>}>
       <CreateWizardInner />
     </Suspense>
   );

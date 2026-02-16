@@ -25,7 +25,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      if (data.otp) setDevOtp(data.otp); // Dev mode
+      if (data.otp) setDevOtp(data.otp);
       setStep("otp");
     } catch (e: unknown) {
       setError((e as Error).message);
@@ -45,7 +45,6 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      // Store token in localStorage as backup
       if (data.token) localStorage.setItem("anyclaw_token", data.token);
       router.push("/dashboard");
     } catch (e: unknown) {
@@ -56,100 +55,71 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <span className="text-3xl">🦀</span>
-            <span className="text-2xl font-bold">AnyClaw</span>
+    <div className="min-h-dvh flex flex-col">
+      <nav className="border-b border-zinc-800/50 bg-zinc-950/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-lg items-center justify-center px-4 py-3">
+          <Link href="/" className="flex items-center gap-1.5">
+            <span className="text-xl">🦀</span>
+            <span className="text-lg font-bold">AnyClaw</span>
           </Link>
-          <h1 className="text-2xl font-bold">
-            {step === "phone" ? "Log in" : "Enter code"}
-          </h1>
-          <p className="text-zinc-400 mt-2">
-            {step === "phone"
-              ? "Enter your WhatsApp number"
-              : `We sent a code to ${phone}`}
-          </p>
         </div>
+      </nav>
 
-        {step === "phone" ? (
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-300">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                placeholder="+54 9 11 2156-3998"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSendOTP()}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-300">
-                Your Name <span className="text-zinc-500">(for new accounts)</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Nahuel"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-              />
-            </div>
-            <button
-              onClick={handleSendOTP}
-              disabled={phone.length < 8 || loading}
-              className="btn-primary w-full disabled:opacity-40"
-            >
-              {loading ? "Sending..." : "Send Code"}
-            </button>
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-6">
+            <h1 className="text-xl font-bold">{step === "phone" ? "Log in" : "Enter code"}</h1>
+            <p className="text-zinc-400 text-sm mt-1">
+              {step === "phone" ? "Enter your WhatsApp number" : `Code sent to ${phone}`}
+            </p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {devOtp && (
-              <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-400">
-                Dev mode — OTP: <span className="font-mono font-bold">{devOtp}</span>
+
+          {step === "phone" ? (
+            <div className="space-y-4">
+              <div>
+                <label className="label">Phone Number</label>
+                <input type="tel" placeholder="+54 9 11 2156-3998" value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSendOTP()}
+                  className="input" autoFocus />
               </div>
-            )}
-            <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-300">
-                Verification Code
-              </label>
-              <input
-                type="text"
-                placeholder="123456"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleVerify()}
-                maxLength={6}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-center text-2xl font-mono tracking-widest text-white placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-              />
+              <div>
+                <label className="label">Name <span className="text-zinc-500 font-normal">(new accounts)</span></label>
+                <input type="text" placeholder="Nahuel" value={name}
+                  onChange={(e) => setName(e.target.value)} className="input" />
+              </div>
+              <button onClick={handleSendOTP} disabled={phone.length < 8 || loading}
+                className="btn-primary w-full disabled:opacity-30">
+                {loading ? "Sending..." : "Send Code"}
+              </button>
             </div>
-            <button
-              onClick={handleVerify}
-              disabled={otp.length !== 6 || loading}
-              className="btn-primary w-full disabled:opacity-40"
-            >
-              {loading ? "Verifying..." : "Verify & Login"}
-            </button>
-            <button
-              onClick={() => { setStep("phone"); setOtp(""); setDevOtp(""); }}
-              className="btn-secondary w-full"
-            >
-              Change number
-            </button>
-          </div>
-        )}
+          ) : (
+            <div className="space-y-4">
+              {devOtp && (
+                <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2.5 text-xs text-yellow-400 text-center">
+                  Dev mode — OTP: <span className="font-mono font-bold text-sm">{devOtp}</span>
+                </div>
+              )}
+              <div>
+                <label className="label">Verification Code</label>
+                <input type="text" inputMode="numeric" placeholder="123456" value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  onKeyDown={(e) => e.key === "Enter" && handleVerify()}
+                  maxLength={6} className="input text-center text-xl font-mono tracking-[0.3em]" autoFocus />
+              </div>
+              <button onClick={handleVerify} disabled={otp.length !== 6 || loading}
+                className="btn-primary w-full disabled:opacity-30">
+                {loading ? "Verifying..." : "Verify & Login"}
+              </button>
+              <button onClick={() => { setStep("phone"); setOtp(""); setDevOtp(""); }}
+                className="btn-secondary w-full">Change number</button>
+            </div>
+          )}
 
-        {error && (
-          <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-xs text-red-400 text-center">{error}</div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -35,7 +35,7 @@ ssh "$SERVER" "systemctl restart anyclaw"
 sleep 3
 
 # 5. Verify
-STATUS=$(ssh "$SERVER" "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/api/agents")
+STATUS=$(ssh "$SERVER" "curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3000/api/agents?k=ac7f2e'")
 if [ "$STATUS" = "200" ]; then
   echo "✅ Deploy complete! API responding 200"
   echo "🌐 http://157.230.173.91"
