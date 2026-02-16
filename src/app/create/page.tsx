@@ -63,40 +63,40 @@ function CreateWizardInner() {
   return (
     <div className="min-h-dvh flex flex-col">
       <nav className="sticky top-0 z-50 border-b border-zinc-800/50 bg-zinc-950/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
+        <div className="nav-container">
           <Link href="/" className="flex items-center gap-1.5">
-            <span className="text-xl">🦀</span>
-            <span className="text-lg font-bold">AnyClaw</span>
+            <span className="text-xl md:text-2xl">🦀</span>
+            <span className="text-lg font-bold md:text-xl">AnyClaw</span>
           </Link>
-          <span className="text-xs text-zinc-500">Create Agent</span>
+          <span className="text-xs text-zinc-500 md:text-sm">Create Agent</span>
         </div>
       </nav>
 
-      <div className="flex-1 mx-auto w-full max-w-lg px-4 py-6">
+      <div className="flex-1 mx-auto w-full max-w-lg md:max-w-2xl px-4 md:px-6 py-6 md:py-10">
         {/* Progress */}
-        <div className="mb-6 flex items-center justify-center gap-2">
+        <div className="mb-6 md:mb-10 flex items-center justify-center gap-2 md:gap-3">
           {[1, 2, 3].map((s) => (
-            <div key={s} className="flex items-center gap-2">
-              <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all ${
+            <div key={s} className="flex items-center gap-2 md:gap-3">
+              <div className={`flex h-7 w-7 md:h-9 md:w-9 items-center justify-center rounded-full text-xs md:text-sm font-bold transition-all ${
                 step >= s ? "bg-cyan-500 text-zinc-950" : "bg-zinc-800 text-zinc-500"
               }`}>{s}</div>
-              {s < 3 && <div className={`h-0.5 w-8 transition-all ${step > s ? "bg-cyan-500" : "bg-zinc-800"}`} />}
+              {s < 3 && <div className={`h-0.5 w-8 md:w-16 lg:w-24 transition-all ${step > s ? "bg-cyan-500" : "bg-zinc-800"}`} />}
             </div>
           ))}
         </div>
 
         {step === 1 && (
           <div>
-            <h2 className="mb-1 text-xl font-bold text-center">Choose your agent</h2>
-            <p className="mb-5 text-center text-sm text-zinc-400">What do you want your AI to do?</p>
-            <div className="grid grid-cols-2 gap-3">
+            <h2 className="mb-1 text-xl font-bold text-center md:text-2xl">Choose your agent</h2>
+            <p className="mb-5 text-center text-sm text-zinc-400 md:text-base md:mb-8">What do you want your AI to do?</p>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
               {TEMPLATES.map((t) => (
                 <button key={t.id} onClick={() => update("template", t.id)}
-                  className={`card text-left active:scale-[0.97] !p-4 ${
+                  className={`card text-left active:scale-[0.97] !p-4 md:!p-5 cursor-pointer ${
                     form.template === t.id ? "!border-cyan-500 bg-cyan-500/5 shadow-lg shadow-cyan-500/10" : ""
                   }`}>
-                  <div className="text-xl mb-1">{t.emoji}</div>
-                  <div className="text-sm font-medium">{t.name}</div>
+                  <div className="text-xl mb-1 md:text-2xl md:mb-2">{t.emoji}</div>
+                  <div className="text-sm font-medium md:text-base">{t.name}</div>
                 </button>
               ))}
             </div>
@@ -104,10 +104,10 @@ function CreateWizardInner() {
         )}
 
         {step === 2 && (
-          <div>
-            <h2 className="mb-1 text-xl font-bold text-center">Customize</h2>
-            <p className="mb-5 text-center text-sm text-zinc-400">Give it a name and personality</p>
-            <div className="space-y-4">
+          <div className="md:max-w-md md:mx-auto">
+            <h2 className="mb-1 text-xl font-bold text-center md:text-2xl">Customize</h2>
+            <p className="mb-5 text-center text-sm text-zinc-400 md:text-base md:mb-8">Give it a name and personality</p>
+            <div className="space-y-4 md:space-y-5">
               <div>
                 <label className="label">Agent Name</label>
                 <input type="text" placeholder="e.g. Luna, Max, Coach..." value={form.agentName}
@@ -135,14 +135,14 @@ function CreateWizardInner() {
         )}
 
         {step === 3 && (
-          <div>
-            <h2 className="mb-1 text-xl font-bold text-center">Connect WhatsApp</h2>
-            <p className="mb-5 text-center text-sm text-zinc-400">Your phone number for agent access</p>
+          <div className="md:max-w-md md:mx-auto">
+            <h2 className="mb-1 text-xl font-bold text-center md:text-2xl">Connect WhatsApp</h2>
+            <p className="mb-5 text-center text-sm text-zinc-400 md:text-base md:mb-8">Your phone number for agent access</p>
             <div>
               <label className="label">WhatsApp Number</label>
               <input type="tel" placeholder="+54 9 11 2156-3998" value={form.userPhone}
                 onChange={(e) => update("userPhone", e.target.value)} className="input" autoFocus />
-              <p className="mt-2 text-xs text-zinc-500">We&apos;ll link your agent via QR code in the next step.</p>
+              <p className="mt-2 text-xs text-zinc-500 md:text-sm">We&apos;ll link your agent via QR code in the next step.</p>
             </div>
           </div>
         )}
@@ -152,9 +152,9 @@ function CreateWizardInner() {
         )}
       </div>
 
-      {/* Sticky bottom */}
-      <div className="sticky bottom-0 border-t border-zinc-800/50 bg-zinc-950/90 backdrop-blur-xl px-4 py-4">
-        <div className="mx-auto max-w-lg flex gap-3">
+      {/* Sticky bottom on mobile, centered on desktop */}
+      <div className="sticky bottom-0 border-t border-zinc-800/50 bg-zinc-950/90 backdrop-blur-xl px-4 py-4 md:py-5">
+        <div className="mx-auto max-w-lg md:max-w-md flex gap-3">
           {step > 1 && (
             <button onClick={() => setStep(step - 1)} className="btn-secondary flex-1">Back</button>
           )}

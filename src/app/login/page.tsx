@@ -57,25 +57,25 @@ export default function LoginPage() {
   return (
     <div className="min-h-dvh flex flex-col">
       <nav className="border-b border-zinc-800/50 bg-zinc-950/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-lg items-center justify-center px-4 py-3">
+        <div className="mx-auto flex max-w-lg md:max-w-2xl items-center justify-center px-4 py-3">
           <Link href="/" className="flex items-center gap-1.5">
-            <span className="text-xl">🦀</span>
-            <span className="text-lg font-bold">AnyClaw</span>
+            <span className="text-xl md:text-2xl">🦀</span>
+            <span className="text-lg font-bold md:text-xl">AnyClaw</span>
           </Link>
         </div>
       </nav>
 
       <div className="flex-1 flex items-center justify-center px-4">
-        <div className="w-full max-w-sm">
-          <div className="text-center mb-6">
-            <h1 className="text-xl font-bold">{step === "phone" ? "Log in" : "Enter code"}</h1>
-            <p className="text-zinc-400 text-sm mt-1">
+        <div className="w-full max-w-sm md:max-w-md">
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-xl font-bold md:text-2xl">{step === "phone" ? "Log in" : "Enter code"}</h1>
+            <p className="text-zinc-400 text-sm mt-1 md:text-base md:mt-2">
               {step === "phone" ? "Enter your WhatsApp number" : `Code sent to ${phone}`}
             </p>
           </div>
 
           {step === "phone" ? (
-            <div className="space-y-4">
+            <div className="space-y-4 md:space-y-5">
               <div>
                 <label className="label">Phone Number</label>
                 <input type="tel" placeholder="+54 9 11 2156-3998" value={phone}
@@ -94,10 +94,10 @@ export default function LoginPage() {
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 md:space-y-5">
               {devOtp && (
-                <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2.5 text-xs text-yellow-400 text-center">
-                  Dev mode — OTP: <span className="font-mono font-bold text-sm">{devOtp}</span>
+                <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2.5 text-xs text-yellow-400 text-center md:text-sm">
+                  Dev mode — OTP: <span className="font-mono font-bold text-sm md:text-base">{devOtp}</span>
                 </div>
               )}
               <div>
@@ -105,7 +105,7 @@ export default function LoginPage() {
                 <input type="text" inputMode="numeric" placeholder="123456" value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                   onKeyDown={(e) => e.key === "Enter" && handleVerify()}
-                  maxLength={6} className="input text-center text-xl font-mono tracking-[0.3em]" autoFocus />
+                  maxLength={6} className="input text-center text-xl font-mono tracking-[0.3em] md:text-2xl" autoFocus />
               </div>
               <button onClick={handleVerify} disabled={otp.length !== 6 || loading}
                 className="btn-primary w-full disabled:opacity-30">
@@ -117,7 +117,7 @@ export default function LoginPage() {
           )}
 
           {error && (
-            <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-xs text-red-400 text-center">{error}</div>
+            <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-xs text-red-400 text-center md:text-sm">{error}</div>
           )}
         </div>
       </div>
